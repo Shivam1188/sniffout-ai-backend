@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
+from decouple import config
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -189,8 +191,18 @@ EMAIL_HOST_PASSWORD = 'iopr mlgp lrnz umgf'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
-FRONTEND_URL = "http://localhost:5173"
+
+TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN')
+TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER')
 
 
+OPENAI_API_KEY = config('OPENAI_API_KEY')
+
+FRONTEND_URL = config('FRONTEND_URL')
 
 
+STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
+STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY')
+DOMAIN_URL = config('DOMAIN_URL')
+STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET')
