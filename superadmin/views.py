@@ -553,21 +553,23 @@ class SubAdminCallRecordFilterView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        user = self.request.user
-        subadmin = getattr(user, 'subadmin_profile', None)
-        
-        if not subadmin:
-            raise NotFound("SubAdmin profile not found for the current user")
-        
+        subadmin_id = self.kwargs.get('subadmin_id')
         time_period = self.request.query_params.get('time_period', None)
+        
+        try:
+            subadmin = SubAdminProfile.objects.get(id=subadmin_id)
+        except SubAdminProfile.DoesNotExist:
+            raise NotFound("SubAdmin not found")
+        
         queryset = CallRecord.objects.filter(restaurant=subadmin)
-
+        
         if time_period:
             now = timezone.now()
+            
             if time_period == 'last_30_days':
                 start_date = now - timedelta(days=30)
                 queryset = queryset.filter(created_at__gte=start_date)
-
+                
             elif time_period == 'last_quarter':
                 current_month = now.month
                 if current_month in [1, 2, 3]:
@@ -579,33 +581,34 @@ class SubAdminCallRecordFilterView(generics.ListAPIView):
                 else:
                     quarter_start = datetime(now.year, 7, 1)
                 queryset = queryset.filter(created_at__gte=quarter_start)
-
+                
             elif time_period == 'year_to_date':
                 year_start = datetime(now.year, 1, 1)
                 queryset = queryset.filter(created_at__gte=year_start)
-
+                
         return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
-        user = request.user
-        subadmin = getattr(user, 'subadmin_profile', None)
-
+        
+        time_period = request.query_params.get('time_period', None)
+        subadmin_id = self.kwargs.get('subadmin_id')
+        
         response_data = {
-            'subadmin_id': subadmin.id if subadmin else None,
-            'time_period': request.query_params.get('time_period', None) or 'all_time',
+            'subadmin_id': subadmin_id,
+            'time_period': time_period or 'all_time',
             'data': serializer.data,
-            'summary': self.get_summary_data(queryset, None)
+            'summary': self.get_summary_data(queryset, time_period)
         }
-
+        
         return Response(response_data)
 
     def get_summary_data(self, queryset, time_period):
         total_calls = queryset.count()
         completed_calls = queryset.filter(status='completed').count()
         total_duration = sum(call.duration for call in queryset if call.duration) or 0
-
+        
         return {
             'total_calls': total_calls,
             'completed_calls': completed_calls,
@@ -771,6 +774,6 @@ class BillingHistoryView(APIView):
         except SubAdminProfile.DoesNotExist:
             return Response({"error": "SubAdminProfile not found for this user."}, status=404)
 
-        payments = PlanPayment.objects.filter(subadmin=subadmin_profile).order_by('-created_at')
+        payments = PlanPayment.objects.filter(subadmin=subadmin_profile.user).order_by('-created_at')
         serializer = PlanHistoryPaymentSerializer(payments, many=True)
         return Response(serializer.data)

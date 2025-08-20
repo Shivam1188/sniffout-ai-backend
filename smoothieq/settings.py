@@ -189,11 +189,8 @@ EMAIL_HOST_PASSWORD = 'iopr mlgp lrnz umgf'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
-
-
-
-
 FRONTEND_URL = "http://localhost:5173"
+
 
 
 

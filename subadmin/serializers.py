@@ -60,11 +60,23 @@ class PhoneTriggerSerializer(serializers.Serializer):
 
 
 class RestaurantLinkSerializer(serializers.ModelSerializer):
-    restaurant_name_display = serializers.CharField(source='restaurant_name.restaurant_name', read_only=True)
-
+    user_id = serializers.IntegerField(write_only=True)  # For receiving user ID from frontend
+    
     class Meta:
         model = RestaurantLink
         fields = '__all__'
+        read_only_fields = ('restaurant_name',)  # Make this read-only
+    
+    def create(self, validated_data):
+        user_id = validated_data.pop('user_id')
+        try:
+            # Get the SubAdminProfile for the given user ID
+            subadmin_profile = SubAdminProfile.objects.get(user_id=user_id)
+            validated_data['restaurant_name'] = subadmin_profile
+        except SubAdminProfile.DoesNotExist:
+            raise serializers.ValidationError("SubAdmin profile not found for this user")
+        
+        return super().create(validated_data)
     
 
 

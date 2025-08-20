@@ -384,32 +384,69 @@ class RestaurantLinkViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """
-        Only allow subadmins to see their own links.
-        Superadmins can see all.
-        """
         user = self.request.user
         if user.is_superuser:
             return RestaurantLink.objects.all()
-        return RestaurantLink.objects.filter(subadmin=user)
+        
+        try:
+            subadmin_profile = SubAdminProfile.objects.get(user=user)
+            return RestaurantLink.objects.filter(restaurant_name=subadmin_profile)
+        except SubAdminProfile.DoesNotExist:
+            return RestaurantLink.objects.none()
 
     def create(self, request, *args, **kwargs):
-        if RestaurantLink.objects.filter(subadmin=request.user).exists():
-            return Response(
-                {"error": "You can only add one restaurant link."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+        if not request.user.is_superuser:
+            try:
+                profile = SubAdminProfile.objects.get(user=request.user)
+                if RestaurantLink.objects.filter(restaurant_name=profile).exists():
+                    return Response(
+                        {"error": "You can only add one restaurant link."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                request.data['user_id'] = request.user.id
+            except SubAdminProfile.DoesNotExist:
+                return Response(
+                    {"error": "SubAdmin profile not found."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if not request.user.is_superuser:
+            try:
+                user_profile = SubAdminProfile.objects.get(user=request.user)
+                if instance.restaurant_name != user_profile:
+                    return Response(
+                        {"error": "You can only update your own restaurant link."},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+                # force association
+                request.data['user_id'] = request.user.id
+            except SubAdminProfile.DoesNotExist:
+                return Response(
+                    {"error": "SubAdmin profile not found."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        if not request.user.is_superuser and instance.subadmin != request.user:
-            return Response(
-                {"error": "You can only delete your own restaurant link."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
+        if not request.user.is_superuser:
+            try:
+                user_profile = SubAdminProfile.objects.get(user=request.user)
+                if instance.restaurant_name != user_profile:
+                    return Response(
+                        {"error": "You can only delete your own restaurant link."},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            except SubAdminProfile.DoesNotExist:
+                return Response(
+                    {"error": "SubAdmin profile not found."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
     
