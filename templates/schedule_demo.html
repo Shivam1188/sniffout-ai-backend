@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Schedule Your Demo - Restaurant Voice Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .form-container {
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .success-message,
+        .error-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Schedule Your Restaurant Voice Assistant Demo</h1>
+            <p>See how AI can transform your restaurant's phone operations</p>
+        </div>
+
+        <div class="form-container">
+            <div id="messages"></div>
+            <div class="loading" id="loading">
+                <p>Scheduling your demo...</p>
+            </div>
+
+            <form id="demoForm">
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone">
+                </div>
+
+                <div class="form-group">
+                    <label for="company">Restaurant/Company Name</label>
+                    <input type="text" id="company" name="company">
+                </div>
+
+                <div class="form-group">
+                    <label for="demo_date">Preferred Date & Time *</label>
+                    <input type="datetime-local" id="demo_date" name="demo_date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="timezone">Your Timezone *</label>
+                    <select id="timezone" name="timezone" required>
+                        {% for value, label in timezones %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="duration">Demo Duration</label>
+                    <select id="duration" name="duration_minutes">
+                        <option value="30">30 minutes</option>
+                        <option value="45">45 minutes</option>
+                        <option value="60">60 minutes</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Additional Message (Optional)</label>
+                    <textarea id="message" name="message" rows="4"
+                        placeholder="Any specific questions or requirements for the demo?"></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary">Schedule Demo</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('demoForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const form = e.target;
+            const submitBtn = form.querySelector('.btn-primary');
+            const loading = document.getElementById('loading');
+            const messages = document.getElementById('messages');
+
+            // Disable form and show loading
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            messages.innerHTML = '';
+
+            // Collect form data
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/api/twilio_bot/book-demo/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    messages.innerHTML = `
+                        <div class="success-message">
+                            <h3>Demo Scheduled Successfully! 🎉</h3>
+                            <p>Thank you! Your demo has been scheduled and you'll receive a confirmation email shortly with the Google Meet link.</p>
+                            ${result.meet_link ? `<p><a href="${result.meet_link}" target="_blank">Join Google Meet</a></p>` : ''}
+                            ${result.calendar_link ? `<p><a href="${result.calendar_link}" target="_blank">Add to Google Calendar</a></p>` : ''}
+                        </div>
+                    `;
+                    form.reset();
+                } else {
+                    throw new Error(result.error || 'Failed to schedule demo');
+                }
+            } catch (error) {
+                messages.innerHTML = `
+                    <div class="error-message">
+                        <h3>Scheduling Failed</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+
+        // Set minimum date to tomorrow
+        document.addEventListener('DOMContentLoaded', function () {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const minDateTime = tomorrow.toISOString().slice(0, 16);
+            document.getElementById('demo_date').min = minDateTime;
+        });
+    </script>
+</body>
+
+</html>
