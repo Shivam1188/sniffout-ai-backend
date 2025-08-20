@@ -33,15 +33,17 @@ class PlanPaymentSerializer(serializers.ModelSerializer):
 
 
 
+
 class RecentlyOnboardedSerializer(serializers.ModelSerializer):
     plan_name = serializers.SerializerMethodField()
     onboarded_date = serializers.SerializerMethodField()
+    email = serializers.EmailField(source='user.email')
 
     class Meta:
         model = SubAdminProfile
         fields = [
             'restaurant_name', 'profile_image', 'restaurant_description',
-            'city', 'state', 'plan_name', 'onboarded_date'
+            'city', 'state', 'plan_name', 'onboarded_date','email'
         ]
 
     def get_plan_name(self, obj):
